@@ -6,11 +6,12 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 
+import java.sql.SQLException;
 import java.util.List;
 
 public class UserDaoHibernateImpl implements UserDao {
     Transaction transaction;
-    SessionFactory sessionFactory = Util.getSessionFactory();
+    private SessionFactory sessionFactory = Util.getSessionFactory();
 
     public UserDaoHibernateImpl() {
 
@@ -23,58 +24,88 @@ public class UserDaoHibernateImpl implements UserDao {
                 "( id BIGINT PRIMARY KEY AUTO_INCREMENT," +
                 " name VARCHAR(50),lastName VARCHAR(50)," +
                 "age TINYINT)";
-        Session session = sessionFactory.openSession();
-        transaction = session.beginTransaction();
-        session.createNativeQuery(createTable).executeUpdate();
-        transaction.commit();
-        session.close();
+        try (Session session = sessionFactory.openSession()) {
+            transaction = session.beginTransaction();
+            session.createNativeQuery(createTable).executeUpdate();
+            transaction.commit();
+        }
+
     }
 
     @Override
     public void dropUsersTable() {
         String dropTable = "DROP TABLE IF EXISTS UserTable";
-        Session session = sessionFactory.openSession();
-        transaction = session.beginTransaction();
-        session.createNativeQuery(dropTable).executeUpdate();
-        transaction.commit();
-        session.close();
+        try (Session session = sessionFactory.openSession()) {
+            transaction = session.beginTransaction();
+            session.createNativeQuery(dropTable).executeUpdate();
+            transaction.commit();
+        }catch (Exception e){
+            if (transaction !=null){
+                transaction.rollback();
+                e.printStackTrace();
+            }
+        }
+
     }
 
     @Override
     public void saveUser(String name, String lastName, byte age) {
-        Session session = sessionFactory.openSession();
-        transaction = session.beginTransaction();
-        session.save(new User(name,lastName,age));
-        transaction.commit();
-        session.close();
+        try (Session session = sessionFactory.openSession()) {
+            transaction = session.beginTransaction();
+            session.save(new User(name, lastName, age));
+            transaction.commit();
+        }catch (Exception e){
+            if (transaction !=null){
+                transaction.rollback();
+                e.printStackTrace();
+            }
+        }
+
     }
 
     @Override
     public void removeUserById(long id) {
-        Session session = sessionFactory.openSession();
-        transaction = session.beginTransaction();
-        User user=session.get(User.class,id);
-        session.delete(user);
-        transaction.commit();
-        session.close();
+        try (Session session = sessionFactory.openSession()) {
+            transaction = session.beginTransaction();
+            User user = session.get(User.class, id);
+            session.delete(user);
+            transaction.commit();
+        }catch (Exception e){
+            if (transaction !=null){
+                transaction.rollback();
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
     public List<User> getAllUsers() {
-        Session session=sessionFactory.openSession();
-        transaction=session.beginTransaction();
-        List<User>users=session.createQuery("from User").getResultList();
-        transaction.commit();
-        session.close();
+        List<User>users = null;
+        try (Session session = sessionFactory.openSession()) {
+            transaction = session.beginTransaction();
+             users = session.createQuery("from User").getResultList();
+            transaction.commit();
+            return users;
+        }catch (Exception e){
+            if (transaction !=null){
+                transaction.rollback();
+                e.printStackTrace();
+            }
+        }
         return users;
     }
 
     @Override
     public void cleanUsersTable() {
-        Session session=sessionFactory.openSession();
-        transaction=session.beginTransaction();
+        try(Session session = sessionFactory.openSession()){
+        transaction = session.beginTransaction();
         session.createNativeQuery("TRUNCATE TABLE usertable;").executeUpdate();
         transaction.commit();
-        session.close();
+        }catch (Exception e){
+            if (transaction !=null){
+                transaction.rollback();
+                e.printStackTrace();
+            }
+        }
     }
 }
